@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rooster Verwerker (Consistent)</title>
+
+    <link ref="stylesheet" href="style.css">
+    <scrip href="script.js"></script>
+</head>
+
+<body>
+<div class="container">
+
+    <!-- HEADER/Titelpagina -->
+    <div class="card">
+        <h1>Rooster Verwerker (Consistent)</h1>
+        <p class="muted">
+            Standaard weergave is groen. Gebruik (D), (E) of (G) voor grijs,
+            (F) voor geel.
+        </p>
+    </div>
+
+    <!-- INPUT veld waar de exceldata komt -->
+    <div class="card">
+        <label>1. Plak Excel data hier (Ctrl+V):</label>
+        <textarea id="inputData" placeholder="Plak Excel data hier..."></textarea>
+
+        <div class="button-row">
+            <button class="btn-primary" onclick="parseAndInit()">2. Lees Data</button>
+            <button class="btn-secondary" onclick="clearData()">Wissen</button>
+        </div>
+
+        <div id="filterControls" class="filters hidden">
+            <div>
+                <label>Kies Dag:</label>
+                <select id="daySelect" onchange="renderTable()"></select>
+            </div>
+            <div>
+                <label>Kies Fase:</label>
+                <select id="phaseSelect" onchange="renderTable()">
+                    <option value="Fase 1">Fase 1</option>
+                    <option value="Fase 2">Fase 2</option>
+                    <option value="Fase 3">Fase 3</option>
+                    <option value="Alle Cliënten">Alle Cliënten</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <!-- OUTPUT -->
+    <div id="outputContainer" class="card hidden"></div>
+
+</div>
+
+</body>
+</html>
