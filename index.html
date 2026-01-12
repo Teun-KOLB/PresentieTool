@@ -173,10 +173,25 @@
         function populateDays() {
             const select = document.getElementById('daySelect');
             const days = Object.keys(parsedRoster);
-            // Maak één HTML string
+
+            if (days.length === 0) {
+                select.innerHTML = '';
+                document.getElementById('filterControls').classList.add('hidden');
+                document.getElementById('outputContainer').classList.add('hidden');
+                return;
+            }
+
+            // Bouw opties als HTML
             select.innerHTML = days.map(day => `<option value="${day}">${day}</option>`).join('');
-            // Standaard geselecteerde dag
-            if (days.length > 0) select.value = days[0];
+
+            // Selecteer eerste dag standaard
+            select.value = days[0];
+
+            // Zorg dat filters zichtbaar zijn
+            document.getElementById('filterControls').classList.remove('hidden');
+
+            // Render de tabel voor de eerste dag, mogelijk dubbel nu?
+            renderTable();
         }
 
         function clearData() {
