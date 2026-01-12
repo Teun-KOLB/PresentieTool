@@ -172,7 +172,7 @@
 
         function populateDays() {
             const select = document.getElementById('daySelect');
-            const days = Object.keys(parsedRoster);
+            const days = Object.keys(state.roster);
 
             if (days.length === 0) {
                 select.innerHTML = '';
