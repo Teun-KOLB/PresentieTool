@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PCP-TEF</title>
+</head>
+
+<body>
+<div class="container">
+
+    <div class="card">
+        <h1>Presentie Controle Programma – TEF</h1>
+        <p>
+            Standaard weergave is groen. Gebruik (D), (E) of (G) voor grijs,
+            (F) voor geel.
+        </p>
+    </div>
+
+    <div class="card">
+        <label>1. Plak Excel data hier (Ctrl+V):</label>
+        <textarea id="inputData" placeholder="Plak Excel data hier..."></textarea>
+
+        <div class="button-row">
+            <button class="btn-primary" onclick="parseAndInit()">2. Lees Data</button>
+            <button class="btn-secondary" onclick="clearData()">Wissen</button>
+        </div>
+
+        <div id="filterControls" class="hidden">
+            <label>Kies Dag:</label>
+            <select id="daySelect" onchange="renderTable()"></select>
+        </div>
+    </div>
+
+    <div id="outputContainer" class="card hidden"></div>
+</div>
+
+<script>
+/* =======================
+CONFIG & STATE
+======================= */
+
+const SPECIAL_CONFIG = {
+    finn: { fields: [
+        { activity: 'Dienstpassend onderwijs', minutes: 60 },
+        { activity: 'Individuele begeleiding', minutes: 30 }
+    ]},
+    bjorn: { fields: [
+        { activity: 'Dienstpassend onderwijs', minutes: 60 },
+        { activity: 'Individuele begeleiding', minutes: 30 }
+    ]},
+    djayden: { fields: [
+        { activity: 'Dienstpassend onderwijs', minutes: 60 },
+        { activity: 'Individuele begeleiding', minutes: 30 }
+    ]},
+    norbert: { fields: [
+        { activity: 'Dienstpassend onderwijs', minutes: 60 },
+        { activity: 'Individuele begeleiding', minutes: 30 }
+    ]},
+    jippe: { fields: [
+        { activity: 'Dienstpassend onderwijs', minutes: 60 },
+        { activity: 'Individuele begeleiding', minutes: 30 }
+    ]},
+    darison: { fields: [
+        { activity: 'Dienstpassend onderwijs', minutes: 60 },
+        { activity: 'Individuele begeleiding', minutes: 30 }
+    ]},
+    kaan: { fields: [
+        { activity: 'Specialistische begeleiding', minutes: 240 },
+        { activity: 'Individuele begeleiding', minutes: 60 }
+    ]}
+};
+
+const state = { roster: {} };
+
+/* =======================
+HELPERS
+======================= */
+
+function parseName(raw) {
+    const marks = [...raw.matchAll(/\(([A-Z])\)/g)].map(m => m[1]);
+    const name = raw.replace(/\([A-Z]\)/g, '').trim();
+    return { name, marks };
+}
+
+function resolveStatus(marks = []) {
+    if (marks.includes('D')) return 'absent';
+    if (marks.includes('E')) return 'grey-zero';
+    if (marks.includes('G')) return 'grey-keep';
+    if (marks.includes('F')) return 'yellow';
+    return 'normal';
+}
+
+function getMinutes(start, end) {
+    const toMin = t => {
+        const [h, m] = t.split(':').map(Number);
+        return h * 60 + m;
+    };
+    return toMin(end) - toMin(start);
+}
+
+/* =======================
+PARSING
+======================= */
+
+function parseAndInit() {
+    state.roster = {};
+    const input = document.getElementById('inputData').value.trim();
+    if (!input) return;
+
+    const rows = input.split('\n').map(r => r.split('\t'));
+
+    let dayByColumn = {};
+
+    rows.forEach(row => {
+
+        /*DAGKOPPEN (header-rij) */
+        row.forEach((cell, colIndex) => {
+            if (!cell) return;
+
+            const m = cell.match(/^(Maandag|Dinsdag|Woensdag|Donderdag|Vrijdag)/i);
+            if (m) {
+                const day = m[1];
+                dayByColumn[colIndex] = day;
+                if (!state.roster[day]) state.roster[day] = [];
+            }
+        });
+
+        /*  LEERLINGEN PER KOLOM */
+        row.forEach((cell, colIndex) => {
+            const day = dayByColumn[colIndex];
+            if (!day || !cell) return;
+
+            const match = cell.trim().match(/^(.+?)\s*\((.*?)\)$/);
+            if (!match) return;
+
+            const rawName = match[1].trim();
+            const timePart = match[2].trim();
+
+            const { name, marks } = parseName(rawName);
+            const status = resolveStatus(marks);
+
+            let minutes = 90;
+            if (/^\d{1,2}:\d{2}\s*-\s*\d{1,2}:\d{2}$/.test(timePart)) {
+                const [start, end] = timePart.split('-').map(t => t.trim());
+                minutes = getMinutes(start, end);
+            }
+
+            state.roster[day].push({ name, status, minutes });
+        });
+    });
+
+    populateDays();
+    document.getElementById('filterControls').classList.remove('hidden');
+    renderTable();
+}
+
+
+/* =======================
+UI
+======================= */
+
+function populateDays() {
+    const select = document.getElementById('daySelect');
+    const days = Object.keys(state.roster);
+    select.innerHTML = days.map(d => `<option value="${d}">${d}</option>`).join('');
+    select.value = days[0];
+}
+
+function clearData() {
+    document.getElementById('inputData').value = '';
+    document.getElementById('outputContainer').classList.add('hidden');
+    document.getElementById('filterControls').classList.add('hidden');
+    state.roster = {};
+}
+
+/* =======================
+RENDERING
+======================= */
+
+function renderTable() {
+    const day = daySelect.value;
+    const container = document.getElementById('outputContainer');
+    if (!state.roster[day]) return;
+
+    container.classList.remove('hidden');
+    const students = {};
+
+    state.roster[day].forEach(s => {
+        if (!students[s.name]) {
+            students[s.name] = { ...s };
+        } else {
+            students[s.name].minutes += s.minutes;
+        }
+    });
+
+    Object.values(students).forEach(s => {
+        if (['absent', 'grey-zero'].includes(s.status)) {
+            s.minutes = 0;
+        }
+
+        const cfg = SPECIAL_CONFIG[s.name.toLowerCase()];
+        if (cfg) {
+            s.split = cfg.fields;
+            s.minutes = cfg.fields.reduce((a, b) => a + b.minutes, 0);
+        }
+    });
+
+    container.innerHTML = buildTable(day, Object.values(students));
+}
+
+/* =======================
+TEMPLATE
+======================= */
+
+function buildTable(day, students) {
+    return `
+        <div class="table-header">
+            <h2>${day}</h2>
+            <p>Dagoverzicht</p>
+        </div>
+
+        <table class="result-table">
+            <thead>
+                <tr>
+                    <th>Naam</th>
+                    <th class="right">Minuten</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${students
+                    .sort((a, b) => a.name.localeCompare(b.name))
+                    .map(s => `
+                        <tr>
+                            <td>${s.name}</td>
+                            <td class="right">${renderMinutes(s)}</td>
+                        </tr>
+                    `).join('')}
+            </tbody>
+        </table>
+    `;
+}
+
+function renderMinutes(student) {
+    if (student.split) {
+        return `
+            <div class="split">
+                ${student.split.map(d => `
+                    <div class="split-item">
+                        <span>${d.activity}</span>
+                        <span>${d.minutes} min</span>
+                    </div>
+                `).join('')}
+            </div>
+        `;
+    }
+    return `<span class="minutes ${student.status}">${student.minutes} min</span>`;
+}
+</script>
+
+<style>
+body {
+    font-family: system-ui, sans-serif;
+    background: #f8fafc;
+    padding: 16px;
+}
+.container {
+    max-width: 1100px;
+    margin: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+.card {
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 24px;
+}
+.hidden { display: none; }
+
+textarea { width: 100%; min-height: 120px; }
+select { padding: 8px; }
+
+.result-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+.result-table th, .result-table td {
+    padding: 12px;
+    border-bottom: 1px solid #e2e8f0;
+}
+.right { text-align: right; }
+
+.minutes.normal { color: #059669; font-weight: 700; }
+.minutes.yellow { color: #ca8a04; font-weight: 700; }
+.minutes.absent,
+.minutes.grey-zero,
+.minutes.grey-keep { color: #94a3b8; font-weight: 700; }
+
+.split {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+.split-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 6px 10px;
+    border-radius: 6px;
+    background: #ecfdf5;
+    border: 1px solid #d1fae5;
+    color: #047857;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+button {
+    padding: 10px 18px;
+    border-radius: 8px;
+    cursor: pointer;
+}
+.btn-primary { background: #2563eb; color: white; border: none; }
+.btn-secondary { background: white; border: 1px solid #cbd5f5; }
+</style>
+
+</body>
+</html>
